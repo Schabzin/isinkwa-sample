@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Isinkwa Sethu (sample website)</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; color: #1d2b1f; background: #f6f8f4; }
+        .banner { background: #fff3cd; padding: 10px; font-size: 14px; text-align: center; }
+        header { background: #1b5e20; color: white; padding: 24px 16px; text-align: center; }
+        header p { margin: 4px 0 0; opacity: 0.9; }
+        main { max-width: 640px; margin: 0 auto; padding: 8px 16px 32px; }
+        section { background: white; border-radius: 12px; padding: 16px; margin-top: 16px; }
+        h2 { margin-top: 0; color: #1b5e20; }
+        button { background: #c62828; color: white; border: 0; border-radius: 8px; padding: 12px 16px; font-size: 16px; }
+        li { margin-bottom: 12px; }
+        a.action { display: inline-block; margin-top: 4px; color: #1b5e20; font-weight: bold; }
+        footer { text-align: center; font-size: 13px; padding: 24px 16px; }
+    </style>
+</head>
+<body>
+    <div class="banner">SAMPLE - not the official Isinkwa Sethu website. Built by Separaka Holdings to show what's possible.</div>
+    <header>
+        <h1>Isinkwa Sethu</h1>
+        <p>Bakery, Groceries &amp; Butchery - Evaton and Sebokeng</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Which branch is near me - and is it open?</h2>
+            <button id="locate">Use my location</button>
+            <p id="note"></p>
+            <ul id="branches"></ul>
+        </section>
+
+        <section>
+            <h2>Prices</h2>
+            <ul id="prices"></ul>
+        </section>
+
+        <section>
+            <h2>Questions people ask</h2>
+            <div id="faq"></div>
+        </section>
+    </main>
+
+    <footer>Sample website by <a href="https://separakaholdings.co.za">Separaka Holdings</a></footer>
+
+    <script src="hours.js"></script>
+    <script src="branches.js"></script>
+    <script src="prices.js"></script>
+    <script src="faq.js"></script>
+    <script>
+        validateBranches(BRANCHES);
+        validatePrices(PRICES);
+        const today = new Date();
+
+        function contactLink(phone) {
+            const a = document.createElement("a");
+            a.className = "action";
+            if (/^0[678]/.test(phone.replace(/\D/g, ""))) {
+                a.href = whatsappLink(phone, "Hi Isinkwa Sethu, I have a question.");
+                a.textContent = "WhatsApp " + phone;
+            } else {
+                a.href = "tel:+" + toInternational(phone);
+                a.textContent = "Call " + phone;
+            }
+            return a;
+        }
+
+        function showBranches(rows) {
+            const list = document.getElementById("branches");
+            list.innerHTML = "";
+            for (const row of rows) {
+                const b = row.branch;
+                const li = document.createElement("li");
+                const distance = row.km === null ? "" : " (" + row.km.toFixed(1) + " km)";
+                const title = document.createElement("strong");
+                title.textContent = b.name + distance;
+                const status = document.createElement("div");
+                status.textContent = branchStatus(b, new Date());
+                const address = document.createElement("div");
+                address.textContent = b.address;
+                li.append(title, status, address, contactLink(b.phone));
+                list.appendChild(li);
+            }
+        }
+
+        const note = document.getElementById("note");
+        const allBranches = () => BRANCHES.map((b) => ({ branch: b, km: null }));
+        showBranches(allBranches());
+
+        document.getElementById("locate").addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                note.textContent = "Your phone can't share location. Both branches are listed below.";
+                return;
+            }
+            note.textContent = "Finding you...";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const sorted = branchesByDistance(BRANCHES, pos.coords.latitude, pos.coords.longitude);
+                    note.textContent = "Nearest: " + sorted[0].branch.name + " (straight-line distance)";
+                    showBranches(sorted);
+                },
+                () => {
+                    note.textContent = "Location not shared. That's fine - both branches are listed below.";
+                    showBranches(allBranches());
+                }
+            );
+        });
+
+        const priceList = document.getElementById("prices");
+        for (const p of PRICES) {
+            const li = document.createElement("li");
+            li.textContent = priceLine(p, today);
+            priceList.appendChild(li);
+        }
+        const more = document.createElement("li");
+        more.textContent = "More prices coming soon - ask in store.";
+        priceList.appendChild(more);
+
+        const faq = document.getElementById("faq");
+        for (const item of buildFaq(PRICES, today)) {
+            const q = document.createElement("h3");
+            q.textContent = item.q;
+            const a = document.createElement("p");
+            a.textContent = item.a;
+            const ask = document.createElement("a");
+            ask.className = "action";
+            ask.href = whatsappLink(WHATSAPP_EVATON, item.ask);
+            ask.textContent = "Ask us on WhatsApp";
+            faq.append(q, a, ask);
+        }
+    </script>
+</body>
+</html> 
